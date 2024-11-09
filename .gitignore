@@ -4,3 +4,5 @@ __pycache__/
 *.pyo
 .vscode/
 .idea/
+train_data_gen_high.h5
+train_data_gen_low.h5
