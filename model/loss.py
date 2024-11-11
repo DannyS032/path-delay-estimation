@@ -25,7 +25,7 @@ def freqloss(prediction, target):
 
       diff = pred_cfr - targ_cfr
       squared_norm = torch.abs(diff)**2
-      loss = torch.mean(torch.sum(squared_norm, dim=2))
+      loss = torch.mean(squared_norm)
 
       return loss
 
@@ -48,7 +48,7 @@ def amploss(prediction, target):
 
       amp_diff = pred_amp_sq - targ_amp_sq
 
-      loss = torch.mean(torch.sum(amp_diff**2, dim=2))
+      loss = torch.mean(amp_diff**2)
 
       return loss
 
@@ -57,8 +57,9 @@ def combloss(prediction_cir, target_cir, target_cfr, alpha = 0.5):
     Combined losses of amplitude and frequence with weight factor alpha 
     
     Args:
-        prediction: Real tensor of shape (N, 2, L) 
-        target: Real tensor of shape (N, 2, L)
+        prediction_cir: Real CIR prediction tensor of shape (N, 2, L) 
+        target_cir: Real CIR target tensor of shape (N, 2, L)
+        target_cfr: Real CFR target tensor of shape (N, 2, L)
         alpha: Weight for frequency (1-alpha for time)
     Returns:
         Combined scalar loss value
@@ -76,12 +77,13 @@ if __name__ == '__main__':
     # Create sample data
     N, L = 10, 256
     pred = torch.randn(N, 2, L)
-    target = torch.randn(N, 2, L)
+    target_cir = torch.randn(N, 2, L)
+    target_cfr = torch.randn(N, 2, L)
     
     # Compute individual losses
-    freq_loss = freqloss(pred, target)
-    amp_loss = amploss(pred, target)
-    total_loss = combloss(pred, target, alpha=0.5)
+    freq_loss = freqloss(pred, target_cfr)
+    amp_loss = amploss(pred, target_cir)
+    total_loss = combloss(pred, target_cir, target_cfr, alpha=0.5)
     
     print(f"Complex L2 Loss: {freq_loss.item():.4f}")
     print(f"Amplitude Squared Loss: {amp_loss.item():.4f}")
