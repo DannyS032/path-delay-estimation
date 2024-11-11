@@ -52,7 +52,7 @@ def amploss(prediction, target):
 
       return loss
 
-def combloss(prediction, target, alpha = 0.5):
+def combloss(prediction_cir, target_cir, target_cfr, alpha = 0.5):
        """
     Combined losses of amplitude and frequence with weight factor alpha 
     
@@ -63,8 +63,8 @@ def combloss(prediction, target, alpha = 0.5):
     Returns:
         Combined scalar loss value
     """
-       freq_loss = freqloss(prediction, target)
-       amp_loss = amploss(prediction, target)
+       freq_loss = freqloss(prediction_cir, target_cfr)
+       amp_loss = amploss(prediction_cir, target_cir)
        
        loss = alpha * freq_loss + (1-alpha) * amp_loss
 
