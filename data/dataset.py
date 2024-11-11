@@ -2,6 +2,7 @@ import torch
 import h5py
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+import os
 
 class ChannelDataset(Dataset):
 
@@ -30,7 +31,8 @@ class ChannelDataset(Dataset):
 
 if __name__ == '__main__':
 
-    file_path = 'data/train_data_gen_high.h5'
+    proj_directory = os.getcwd()
+    file_path = os.path.join(proj_directory, 'data/train_data_gen_high.h5')
     dataset = ChannelDataset(file_path)
 
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1, pin_memory=True)
