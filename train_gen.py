@@ -11,7 +11,7 @@ from model.loss import *
 import os
 import matplotlib.pyplot as plt
 
-def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
+def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
     """
     Training function for the U-net Generative network.
     
@@ -19,12 +19,13 @@ def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-
         model: The U-net Generative network model
         train_loader: DataLoader for training data
         num_epochs: Number of training epochs
+        folder: Directory path for saving training logs and the model
+        snr_case: SNR case (either high or low)
         learning_rate: Initial learning rate for optimizer
         alpha: Weight factor for combined loss
         device: Device to run the training on
         step: Step size for learning rate decay
         print_interval: Interval for logging training status
-        folder: Directory path for saving training logs and the model
     Returns:
         model: Trained U-net Generative network model
     """
@@ -34,8 +35,8 @@ def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-
     exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step, gamma=0.3)
     
     # Files for saving loss values & trained model
-    log_path = os.path.join(folder, 'gen_loss_log.txt')
-    model_path = os.path.join(folder, 'gen_model_trained.w')
+    log_path = os.path.join(folder, f'gen_loss_log_{snr_case}.txt')
+    model_path = os.path.join(folder, f'gen_model_trained_{snr_case}.w')
 
     # Loss array for later plotting
     loss_array = []
@@ -95,8 +96,16 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
     if os.path.exists(folder) == False:
         os.makedirs(folder)
     
+    # Checking SNR case
+    if 'high' in training_file:
+        snr_case = 'high'
+    elif 'low' in training_file:
+        snr_case = 'low'
+    else:
+        snr_case = ''
+    
     # train
-    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder)
+    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder, snr_case)
     model_trained.eval()
 
     # Plots for testing
@@ -114,5 +123,8 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
 
 if __name__ == '__main__':
     
-    file_name = 'data/train_data_gen_high.h5'
-    train(file_name, plot_losses=True)
+    file_name_high = 'data/train_data_high.h5'
+    file_name_low = 'data/train_data_low.h5'
+
+    train(file_name_high, plot_losses=False)
+    train(file_name_low, plot_losses=False)

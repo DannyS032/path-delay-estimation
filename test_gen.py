@@ -28,20 +28,20 @@ def plot2test(cir_l, cir_h_gt, cir_h_pred):
     plt.figure(figsize=(12,4))
     # Input Plot
     plt.subplot(1, 3, 1)
-    plt.plot(cir_l, label="Low-res. CIR")
+    plt.plot(cir_l[:70], label="Low-res. CIR")
     plt.title("Noisy low-res. CIR")
     plt.legend()
     
     # Target Plot
     plt.subplot(1, 3, 2)
-    plt.plot(cir_h_gt, label="High-res. CIR", color='g')
+    plt.plot(cir_h_gt[:70], label="High-res. CIR", color='g')
     plt.title("Ground-truth high-res. CIR")
     plt.legend()
     
     # Prediction Plot with Target Overlay
     plt.subplot(1, 3, 3)
-    plt.plot(cir_h_gt, label="Ground-truth CIR (High)", color='g')
-    plt.plot(cir_h_pred, label="Generated CIR (High)", color='r')
+    plt.plot(cir_h_gt[:70], label="Ground-truth CIR (High)", color='g')
+    plt.plot(cir_h_pred[:70], label="Generated CIR (High)", color='r')
     plt.title("Ground-truth vs Generated CIR")
     plt.legend()
     
@@ -72,7 +72,7 @@ def real2complex2dim(x: torch.Tensor) -> torch.Tensor:
     # Add batch dimension
     return complex_tensor.unsqueeze(0)  # Shape: (1, L)
 
-def test_rand_sample(test_file, batch_size=400):
+def test_rand_sample(test_file, snr_case, batch_size=400):
 
     # choose device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -85,7 +85,7 @@ def test_rand_sample(test_file, batch_size=400):
 
     # load trained model
     model = unet().to(device)
-    gen_model_path = os.path.join(proj_directory, 'train-gen/model_gen_trained.w')
+    gen_model_path = os.path.join(proj_directory, f'train-gen/gen_model_trained_{snr_case}.w')
     model.load_state_dict(torch.load(gen_model_path, weights_only=True))
     model.eval()
 
@@ -118,5 +118,9 @@ def test_rand_sample(test_file, batch_size=400):
         break
 
 if __name__=='__main__':
-    test_file = 'data/test_data_high.h5'
-    test_rand_sample(test_file)
+    test_file_high = 'data/test_data_high.h5'
+    test_file_low = 'data/test_data_low.h5'
+
+    test_rand_sample(test_file_high,snr_case='high', batch_size=5000)
+    test_rand_sample(test_file_low,snr_case='low', batch_size=5000)
+
