@@ -32,7 +32,7 @@ class ChannelDataset(Dataset):
 if __name__ == '__main__':
 
     proj_directory = os.getcwd()
-    file_path = os.path.join(proj_directory, 'data/train_data_gen_high.h5')
+    file_path = os.path.join(proj_directory, 'data/train_data_high.h5')
     dataset = ChannelDataset(file_path)
 
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=1, pin_memory=True)
