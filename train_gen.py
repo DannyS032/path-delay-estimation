@@ -9,6 +9,7 @@ from model.layers import *
 from model.network import *
 from model.loss import *
 import os
+import matplotlib.pyplot as plt
 
 def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
     """
@@ -25,7 +26,7 @@ def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-
         print_interval: Interval for logging training status
         folder: Directory path for saving training logs and the model
     Returns:
-        Trained U-net Generative network model
+        model: Trained U-net Generative network model
     """
     
     # Initialize optimizer
@@ -33,8 +34,11 @@ def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-
     exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step, gamma=0.3)
     
     # Files for saving loss values & trained model
-    log_path = os.path.join(folder, 'loss_log_gen.txt')
-    model_path = os.path.join(folder, 'model_gen_trained.w')
+    log_path = os.path.join(folder, 'gen_loss_log.txt')
+    model_path = os.path.join(folder, 'gen_model_trained.w')
+
+    # Loss array for later plotting
+    loss_array = []
     
     with open(log_path, 'w') as log_file:
         for epoch in range(num_epochs):
@@ -63,15 +67,17 @@ def train_gen_network(model, train_loader, num_epochs, folder, learning_rate=1e-
                     print(log_message)
                     log_file.write(log_message + '\n')
                     log_file.flush()
+
+                loss_array.append(loss.item())
             
             exp_lr_scheduler.step()
 
     print('Training Generative network finished!')
     torch.save(model.state_dict(), model_path)
 
-    return model
+    return model, loss_array
 
-def train(training_file, batch_size=400, num_epochs=200):
+def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
     # choose device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -90,11 +96,23 @@ def train(training_file, batch_size=400, num_epochs=200):
         os.makedirs(folder)
     
     # train
-    model_trained = train_gen_network(model, gen_dataloader, num_epochs, folder)
+    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder)
     model_trained.eval()
+
+    # Plots for testing
+    if plot_losses:
+        log_loss = np.log(losses)
+        plt.figure
+        plt.plot(log_loss, label="loss")
+        plt.xlabel("Iteration")
+        plt.ylabel("Log(Loss)")
+        plt.title("Log Loss vs. Iteration")
+        plt.legend()
+        plt.grid()
+        plt.show()
 
 
 if __name__ == '__main__':
     
     file_name = 'data/train_data_gen_high.h5'
-    train(file_name)
+    train(file_name, plot_losses=True)
