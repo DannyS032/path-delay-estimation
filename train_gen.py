@@ -109,15 +109,16 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
     model_trained.eval()
 
     # Plots for testing
+    log_loss = np.log(losses)
+    plt.figure
+    plt.plot(log_loss, label="loss")
+    plt.xlabel("Iteration")
+    plt.ylabel("Log(Loss)")
+    plt.title("Log Loss vs. Iteration")
+    plt.legend()
+    plt.grid()
+    plt.savefig(f'train-gen/loss_vs_interation_{snr_case}_plot.png')
     if plot_losses:
-        log_loss = np.log(losses)
-        plt.figure
-        plt.plot(log_loss, label="loss")
-        plt.xlabel("Iteration")
-        plt.ylabel("Log(Loss)")
-        plt.title("Log Loss vs. Iteration")
-        plt.legend()
-        plt.grid()
         plt.show()
 
 
