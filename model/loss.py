@@ -70,6 +70,24 @@ def combloss(prediction_cir, target_cir, target_cfr, alpha = 0.5):
        loss = alpha * freq_loss + (1-alpha) * amp_loss
 
        return loss
+
+
+def mseloss(pred_toa, target_toa):
+
+    """
+    Compute L2 squared MSE Loss
+    
+    Args:
+        prediction: Real tensor of shape (N) 
+        target: Real tensor of shape (N)
+    
+    Returns:
+        Scalar loss value (mean over batch)
+    """
+    diff = pred_toa - target_toa
+    loss = torch.mean(diff**2)
+
+    return loss
        
 
 
