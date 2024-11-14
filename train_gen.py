@@ -78,7 +78,7 @@ def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learnin
 
     return model, loss_array
 
-def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
+def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alpha=0.5):
     # choose device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -105,7 +105,7 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
         snr_case = ''
     
     # train
-    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder, snr_case)
+    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder, snr_case, alpha=alpha)
     model_trained.eval()
 
     # Plots for testing
@@ -117,9 +117,43 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
     plt.title("Log Loss vs. Iteration")
     plt.legend()
     plt.grid()
-    plt.savefig(f'train-gen/loss_vs_interation_{snr_case}_plot.png')
     if plot_losses:
+        plt.savefig(f'train-gen/loss_vs_interation_{snr_case}_plot.png')
         plt.show()
+
+    return log_loss
+
+def train_for_test_alpha(file_name_high, file_name_low):
+    # Will be deleted after testing
+    alpha_values = [0.1, 0.25, 0.5, 0.75, 0.9]
+    results_high, results_low = {}, {}
+    for alpha in alpha_values:
+        loss_high = train(file_name_high, plot_losses=False, alpha=alpha)
+        results_high[alpha] = loss_high
+        loss_low = train(file_name_low, plot_losses=False, alpha=alpha)
+        results_low[alpha] = loss_low
+    
+    plt.figure(figsize=(12,4))
+
+    plt.subplot(1,2,1)
+    for alpha, loss in results_high.items():
+        plt.plot(loss, label=f'alpha = {alpha}')
+    plt.xlabel("Iteration")
+    plt.ylabel("Log(Loss)")
+    plt.title("Log Loss vs. Iteration (High SNR)")
+    plt.legend()
+    plt.grid()
+
+    plt.subplot(1,2,2)
+    for alpha, loss in results_low.items():
+        plt.plot(loss, label=f'alpha = {alpha}')
+    plt.xlabel("Iteration")
+    plt.ylabel("Log(Loss)")
+    plt.title("Log Loss vs. Iteration (Low SNR)")
+    plt.legend()
+    plt.grid()
+
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -127,5 +161,10 @@ if __name__ == '__main__':
     file_name_high = 'data/train_data_high.h5'
     file_name_low = 'data/train_data_low.h5'
 
-    train(file_name_high, plot_losses=False)
-    train(file_name_low, plot_losses=False)
+    train(file_name_high)
+    train(file_name_low)
+
+   
+
+
+
