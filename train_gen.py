@@ -10,6 +10,7 @@ from model.network import *
 from model.loss import *
 import os
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
     """
@@ -42,7 +43,7 @@ def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learnin
     loss_array = []
     
     with open(log_path, 'w') as log_file:
-        for epoch in range(num_epochs):
+        for epoch in tqdm(range(num_epochs)):
             # Training loop
             
             for i, (frame) in enumerate(train_loader):
@@ -65,7 +66,6 @@ def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learnin
                 # Print progress every print_interval batches
                 if (i % print_interval) == 0:
                     log_message = f'Epoch [{epoch+1}/{num_epochs}], Batch [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}'
-                    print(log_message)
                     log_file.write(log_message + '\n')
                     log_file.flush()
 
