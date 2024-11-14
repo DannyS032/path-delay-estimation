@@ -2,14 +2,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-
+# For Regression Networks
 class Flatten(nn.Module):
   def forward(self, x):
-    N, C, H, W = x.size() # read in N, C, H, W
+    N, C, H = x.size() # read in N, C, H, W
     return x.view(N, -1)  # "flatten" the C * H * W values into a single vector per image
 
+# For Regression Networks
+class Sandwich(nn.Module):
+    def __init__(self, C_in, C_out, kernel_size, stride=1):
+        super(Sandwich, self).__init__()
+        self.conv = nn.Conv1d(C_in, C_out, kernel_size, stride=stride, padding=(kernel_size-1)//2)
+        self.batch = nn.BatchNorm1d(C_out)
+        self.relu = nn.LeakyReLU(0.2)
 
+    def forward(self, x):
+        return self.relu(self.batch(self.conv(x)))
 
+# For Generative Network
 class SubPixel1D(nn.Module):
     ''' One dimensional subpixel upsampling layer
 
