@@ -13,8 +13,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torchinterp1d import Interp1d
 
-ver = torch.__version__
-
 def interp1d(y, x, x_new):
     '''
     linear interpolation for the third dimension
