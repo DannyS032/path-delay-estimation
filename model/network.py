@@ -71,3 +71,21 @@ class unet(nn.Module):
         x_out = self.final(x9)
 
         return x_out+x
+    
+
+class regnet(nn.Module):
+    def __init__(self, len_in, C_in):
+        super(regnet, self).__init__()
+
+        self.net = nn.Sequential(Sandwich(C_in, 64, 9, stride=2),
+                       Sandwich(64, 128, 5, stride=2),
+                       Sandwich(128, 256, 3, stride=2),
+                       Flatten(),
+                       nn.Linear(256*len_in//8, 1024),
+                       nn.ReLU(True),
+                       nn.Linear(1024,256),
+                       nn.ReLU(True),
+                       nn.Linear(256, 1))
+
+    def forward(self, x):
+        return self.net(x)

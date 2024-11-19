@@ -89,7 +89,7 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
     gen_dataloader = DataLoader(gen_dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
     # initialize model
-    model = unet().to(device)
+    gen_model = unet().to(device)
 
     # initialize folder for saving training data
     folder = os.path.join(proj_directory, 'train-gen')
@@ -105,8 +105,8 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
         snr_case = ''
     
     # train
-    model_trained, losses = train_gen_network(model, gen_dataloader, num_epochs, folder, snr_case, alpha=alpha)
-    model_trained.eval()
+    gen_model_trained, losses = train_gen_network(gen_model, gen_dataloader, num_epochs, folder, snr_case, alpha=alpha)
+    gen_model_trained.eval()
 
     # Plots for testing
     log_loss = np.log(losses)
