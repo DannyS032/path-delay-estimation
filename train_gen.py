@@ -11,8 +11,91 @@ from model.loss import *
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from torchinterp1d import Interp1d
+
+def interp1d(y, x, x_new):
+    '''
+    linear interpolation for the third dimension
+    y: Nx2xL
+    x: Nx2xL
+    x_new: Nx2xL
+    '''
+    N = y.shape[0]
+    out = []
+    for i in range(N):
+        y_new = None
+        y_new = Interp1d()(x[i], y[i], x_new[i], y_new).unsqueeze(0)   
+        out.append(y_new)
+            
+    return torch.cat(out, 0).detach()   
 
 def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
+    """
+    Training function for the U-net Generative network.
+    
+    Args:
+        model: The U-net Generative network model
+        train_loader: DataLoader for training data
+        num_epochs: Number of training epochs
+        folder: Directory path for saving training logs and the model
+        snr_case: SNR case (either high or low)
+        learning_rate: Initial learning rate for optimizer
+        alpha: Weight factor for combined loss
+        device: Device to run the training on
+        step: Step size for learning rate decay
+        print_interval: Interval for logging training status
+    Returns:
+        model: Trained U-net Generative network model
+    """
+    
+    # Initialize optimizer
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step, gamma=0.3)
+    
+    # Files for saving loss values & trained model
+    log_path = os.path.join(folder, f'gen_loss_log_{snr_case}.txt')
+    model_path = os.path.join(folder, f'gen_model_trained_{snr_case}.w')
+
+    # Loss array for later plotting
+    loss_array = []
+    
+    with open(log_path, 'w') as log_file:
+        for epoch in tqdm(range(num_epochs)):
+            # Training loop
+            
+            for i, (frame) in enumerate(train_loader):
+                # Move batch to device
+                cir_l = frame['cir_l'].float().to(device)
+                cir_h = frame['cir_h'].float().to(device)
+                cfr_h = frame['cfr_h'].float().to(device)
+                
+                # Forward pass
+                predicted_cir_h = model(cir_l)
+                
+                # Compute loss
+                loss = combloss(predicted_cir_h, cir_h, cfr_h, alpha=alpha)
+                
+                # Backward pass and optimization
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                
+                # Print progress every print_interval batches
+                if (i % print_interval) == 0:
+                    log_message = f'Epoch [{epoch+1}/{num_epochs}], Batch [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}'
+                    log_file.write(log_message + '\n')
+                    log_file.flush()
+
+                loss_array.append(loss.item())
+            
+            exp_lr_scheduler.step()
+
+    print('Training Generative network finished!')
+    torch.save(model.state_dict(), model_path)
+
+    return model, loss_array
+
+def train_reg_network(model, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
     """
     Training function for the U-net Generative network.
     
