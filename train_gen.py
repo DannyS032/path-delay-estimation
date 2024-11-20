@@ -172,7 +172,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     regB_tar = regB(cir_h_gen_crop)
                     toa_fine = toa_coarse + regB_tar
 
-                    if test_plots and i == 200 and (epoch / 20) == 0:
+                    if test_plots and i == 200 and (epoch % 20) == 0:
                         # Test plots
                         rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
                         cir_l_plot = real2complex2dim(cir_l[rand_index]).cpu().numpy().squeeze()
