@@ -1,0 +1,2 @@
+Epoch [1/200], Batch [1/500], (Coarse) Loss: 10939.7451
+Epoch [1/200], Batch [101/500], Coarse Loss: 847.2833, Fine Loss: 845.8204

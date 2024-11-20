@@ -169,11 +169,11 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     # Estimating error of coarse ToA from ground truth
                     toa_val = toa[index]
                     diff_gt_coarse = toa_val - toa_coarse_val # Difference between ground-truth tau_0 and coarse[tau_0] 
-                    regB_tar = regB(cir_h_gen_crop)
-                    toa_fine = toa_coarse_val + regB_tar
+                    regB_pred = regB(cir_h_gen_crop)
+                    toa_fine = toa_coarse_val + regB_pred
 
                     rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
-                    if test_plots and (i % 200) == 0 and (epoch % 20) == 0:
+                    if test_plots and (i % 200) == 0 and (epoch % 5) == 0:
                         # Test plots
                         cir_l_plot = real2complex2dim(cir_l[rand_index]).cpu().numpy().squeeze()
                         cir_h_gen_plot = real2complex2dim(cir_h_gen[rand_index]).detach().cpu().numpy().squeeze()
@@ -217,7 +217,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     
                     # Compute loss (fine + coarse)
                     coarse_loss = mseloss(toa_coarse, toa)
-                    fine_loss = mseloss(regB_tar, diff_gt_coarse)
+                    fine_loss = mseloss(regB_pred, diff_gt_coarse)
                     loss = coarse_loss + fine_loss
 
                     # Backward pass and optimization
