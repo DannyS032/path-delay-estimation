@@ -226,8 +226,8 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
 
     # initialize models
     gen_model = unet().to(device)
-    regA_model = regnet(256, 2).to(device)
-    regB_model = regnet(win_idx, 2).to(device)
+    regA_model = regnet(256).to(device)
+    regB_model = regnet(win_idx).to(device)
 
     # initialize folder for saving training data
     folder_gen = os.path.join(proj_directory, 'train-gen')
