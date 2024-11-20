@@ -124,6 +124,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
     
     # Files for saving loss values & trained model
     log_path = os.path.join(folder, f'regA+B_loss_log_{snr_case}.txt')
+    log_toa_path = os.path.join(folder, f'regA+B_toa_log_{snr_case}.txt')
     model_path_A = os.path.join(folder, f'regA_model_trained_{snr_case}.w')
     model_path_B = os.path.join(folder, f'regB_model_trained_{snr_case}.w')
 
@@ -132,7 +133,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
     loss_arrayA = []
     loss_arrayB = []
     
-    with open(log_path, 'w') as log_file:
+    with open(log_path, 'w') as log_file, open(log_toa_path, 'w') as log_toa_file:
         for epoch in tqdm(range(num_epochs)):
             # Training loop
             
@@ -156,28 +157,27 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                 window = torch.arange(-win_siz, win_siz, 2*win_siz/win_idx).repeat(2, 1).to(device)
 
                 if torch.sum(index) != 0:
-                    # For samples with coarse ToA estimation in range cont. to fine estimation
+                    # For valid samples with coarse ToA estimation in range cont. to fine estimation
                     with torch.no_grad():
-                        cir_l = cir_l[index]
-                        cir_h_gen = cir_h_gen[index]
-                        toa_coarse = toa_coarse[index]
+                        cir_h_gen_val = cir_h_gen[index]
+                        toa_coarse_val = toa_coarse[index]
                         x_new = toa_coarse.unsqueeze(-1) + window.unsqueeze(0)
                         x = x.repeat(cir_l.shape[0],1,1)
-                        cir_h_gen_crop = interp1d(cir_h_gen, x, x_new) 
+                        cir_h_gen_crop = interp1d(cir_h_gen_val, x, x_new) 
 
 
                     # Estimating error of coarse ToA from ground truth
-                    toa = toa[index]
-                    diff = toa - toa_coarse
+                    toa_val = toa[index]
+                    diff_gt_coarse = toa_val - toa_coarse_val # Difference between ground-truth tau_0 and coarse[tau_0] 
                     regB_tar = regB(cir_h_gen_crop)
-                    toa_fine = toa_coarse + regB_tar
+                    toa_fine = toa_coarse_val + regB_tar
 
-                    if test_plots and i == 200 and (epoch % 20) == 0:
+                    rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
+                    if test_plots and (i % 200) == 0 and (epoch % 20) == 0:
                         # Test plots
-                        rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
                         cir_l_plot = real2complex2dim(cir_l[rand_index]).cpu().numpy().squeeze()
-                        cir_h_gen_plot = real2complex2dim(cir_h_gen[rand_index]).cpu().numpy().squeeze()
-                        cir_h_gen_crop_plot = real2complex2dim(cir_h_gen_crop[rand_index]).cpu().numpy().squeeze()
+                        cir_h_gen_plot = real2complex2dim(cir_h_gen[rand_index]).detach().cpu().numpy().squeeze()
+                        cir_h_gen_crop_plot = real2complex2dim(cir_h_gen_crop[rand_index]).detach().cpu().numpy().squeeze()
                         x_plot = 12.5 * torch.arange(0, 256)
                         x_new_plot = x_new[rand_index].cpu().numpy().squeeze()
                         x_new_plot = x_new_plot[0,:]
@@ -217,7 +217,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     
                     # Compute loss (fine + coarse)
                     coarse_loss = mseloss(toa_coarse, toa)
-                    fine_loss = mseloss(regB_tar, diff)
+                    fine_loss = mseloss(regB_tar, diff_gt_coarse)
                     loss = coarse_loss + fine_loss
 
                     # Backward pass and optimization
@@ -225,10 +225,11 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     optimizer.step()
 
                     # Print progress every print_interval batches
-                    if i == 200:
-                        print(f'Ground Truth ToA: {toa[rand_index].item()}, Coarse ToA: {toa_coarse[rand_index].item()}, Fine ToA: {toa_fine[rand_index].item()}')
                     if (i % print_interval) == 0:
+                        log_toa_messege = f'Ground Truth ToA: {toa[rand_index].item()}, Coarse ToA: {toa_coarse[rand_index].item()}, Fine ToA: {toa_fine[rand_index].item()}'
                         log_message = f'Epoch [{epoch+1}/{num_epochs}], Batch [{i+1}/{len(train_loader)}], Coarse Loss: {coarse_loss.item():.4f}, Fine Loss: {fine_loss.item():.4f}'
+                        log_toa_file.write(log_toa_messege + '\n')
+                        log_toa_file.flush()
                         log_file.write(log_message + '\n')
                         log_file.flush()
 
