@@ -12,6 +12,8 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torchinterp1d import Interp1d
+import random
+from test_gen import *
 
 def interp1d(y, x, x_new):
     '''
@@ -26,7 +28,7 @@ def interp1d(y, x, x_new):
         y_new = Interp1d.apply(x[i], y[i], x_new[i]) 
         out.append(y_new.unsqueeze(0))
             
-    return torch.cat(out, 0).detach()   
+    return torch.cat(out, 0).detach()
 
 def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, alpha=0.5, device='cuda', step=40, print_interval=100):
     """
@@ -94,7 +96,7 @@ def train_gen_network(model, train_loader, num_epochs, folder, snr_case, learnin
 
     return model, loss_array
 
-def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, device='cuda', step=40, print_interval=100, win_siz = 60, win_idx = 128):
+def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, device='cuda', step=40, print_interval=100, win_siz = 100, win_idx = 128, test_plots=False):
     """
     Training function for the Regressive A-B Cascade network.
     
@@ -167,11 +169,55 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     # Estimating error of coarse ToA from ground truth
                     toa = toa[index]
                     diff = toa - toa_coarse
-                    toa_fine = regB(cir_h_gen_crop)
+                    regB_tar = regB(cir_h_gen_crop)
+                    toa_fine = toa_coarse + regB_tar
 
+                    if test_plots and i == 200 and (epoch / 20) == 0:
+                        # Test plots
+                        rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
+                        cir_l_plot = real2complex2dim(cir_l[rand_index]).cpu().numpy().squeeze()
+                        cir_h_gen_plot = real2complex2dim(cir_h_gen[rand_index]).cpu().numpy().squeeze()
+                        cir_h_gen_crop_plot = real2complex2dim(cir_h_gen_crop[rand_index]).cpu().numpy().squeeze()
+                        x_plot = 12.5 * torch.arange(0, 256)
+                        x_new_plot = x_new[rand_index].cpu().numpy().squeeze()
+                        x_new_plot = x_new_plot[0,:]
+                        toa_plot = toa[rand_index].item()
+                        toa_coarse_plot = toa_coarse[rand_index].item()
+    
+                        # abs values
+                        cir_l_plot = np.abs(cir_l_plot)
+                        cir_h_gen_plot = np.abs(cir_h_gen_plot)
+                        cir_h_gen_crop_plot = np.abs(cir_h_gen_crop_plot)
+    
+                        plt.figure(figsize=(12,4))
+                        # Input Plot
+                        plt.subplot(1, 3, 1)
+                        plt.plot(x_plot[:70], cir_l_plot[:70], label="Low-res. CIR")
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
+                        plt.title(f"Noisy low-res. CIR, ToA: {toa_plot}")
+                        plt.legend()
+                        
+                        # Target Plot
+                        plt.subplot(1, 3, 2)
+                        plt.plot(x_plot[:70], cir_h_gen_plot[:70], label="High-res. CIR", color='g')
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
+                        plt.title(f"Generated high-res. CIR, ToA: {toa_plot}")
+                        plt.legend()
+                        
+                        # Prediction Plot with Target Overlay
+                        plt.subplot(1, 3, 3)
+                        plt.plot(x_new_plot, cir_h_gen_crop_plot, label="Ground-truth CIR (High)", color='g')
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
+                        plt.title(f"Cropped (windowed) high-res. CIR around coarse ToA {toa_coarse_plot}")
+                        plt.legend()
+                        
+                        # Show the plots
+                        plt.tight_layout()
+                        plt.show()
+                    
                     # Compute loss (fine + coarse)
                     coarse_loss = mseloss(toa_coarse, toa)
-                    fine_loss = mseloss(toa_fine, diff)
+                    fine_loss = mseloss(regB_tar, diff)
                     loss = coarse_loss + fine_loss
 
                     # Backward pass and optimization
@@ -179,6 +225,8 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                     optimizer.step()
 
                     # Print progress every print_interval batches
+                    if i == 200:
+                        print(f'Ground Truth ToA: {toa[rand_index].item()}, Coarse ToA: {toa_coarse[rand_index].item()}, Fine ToA: {toa_fine[rand_index].item()}')
                     if (i % print_interval) == 0:
                         log_message = f'Epoch [{epoch+1}/{num_epochs}], Batch [{i+1}/{len(train_loader)}], Coarse Loss: {coarse_loss.item():.4f}, Fine Loss: {fine_loss.item():.4f}'
                         log_file.write(log_message + '\n')
@@ -253,7 +301,7 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
     else:
         gen_model_trained, losses = train_gen_network(gen_model, dataloader, num_epochs, folder_gen, snr_case, alpha=alpha)
         gen_model_trained.eval()
-    loss_reg, loss_regA, loss_regB = train_regs_network(regA_model, regB_model, gen_model_trained, dataloader, num_epochs, folder_reg, snr_case)
+    loss_reg, loss_regA, loss_regB = train_regs_network(regA_model, regB_model, gen_model_trained, dataloader, num_epochs, folder_reg, snr_case, win_idx=win_idx, test_plots=True)
 
     # Plots for testing
     log_loss = np.log(losses)
