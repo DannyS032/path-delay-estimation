@@ -74,10 +74,10 @@ class unet(nn.Module):
     
 
 class regnet(nn.Module):
-    def __init__(self, len_in, C_in):
+    def __init__(self, len_in):
         super(regnet, self).__init__()
 
-        self.net = nn.Sequential(Sandwich(C_in, 64, 9, stride=2),
+        self.net = nn.Sequential(Sandwich(2, 64, 9, stride=2),
                        Sandwich(64, 128, 5, stride=2),
                        Sandwich(128, 256, 3, stride=2),
                        Flatten(),
