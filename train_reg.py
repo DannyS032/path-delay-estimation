@@ -75,6 +75,7 @@ def train_regA_network(regA, train_loader, num_epochs, folder, snr_case, learnin
 
                 # Coarse ToA estimation
                 toa_coarse = regA(cir_h)
+                toa_coarse = toa_coarse.squeeze(-1)
 
                 # Compute loss (only coarse)
                 loss = mseloss(toa_coarse, toa)
@@ -84,7 +85,7 @@ def train_regA_network(regA, train_loader, num_epochs, folder, snr_case, learnin
                 optimizer.step()
 
                 rand_index = random.randint(0, cir_h.size(0)-1) # [0, N-1]
-                if test_plots and (i % 400) == 0 and (epoch % 20) == 0:
+                if test_plots and (i % 400) == 0 and (epoch % 50) == 0:
                     # Test plots
                     cir_h_plot = real2complex2dim(cir_h[rand_index]).cpu().numpy().squeeze()
                     x_plot = 12.5 * torch.arange(0, cir_h.size(2))
