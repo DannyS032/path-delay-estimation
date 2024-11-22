@@ -124,15 +124,13 @@ def train_regA_network(regA, train_loader, num_epochs, folder, snr_case, learnin
 
     return regA ,loss_array
 
-
-def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, device='cuda', step=40, print_interval=100, win_siz = 100, win_idx = 128, test_plots=False):
+def train_regs_test_network(regA, regB, train_loader, num_epochs, folder, snr_case, learning_rate=1e-3, device='cuda', step=40, print_interval=100, win_siz = 100, win_idx = 128, test_plots=False):
     """
     Training function for the Regressive A-B Cascade network.
     
     Args:
         regA: Regressor A model of the Regressive network model
         regB: Regressor B model of the Regressive network model
-        gen: The Trained U-net Generative network model
         train_loader: DataLoader for training data
         num_epochs: Number of training epochs
         folder: Directory path for saving training logs and the model
@@ -144,7 +142,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
         win_siz: Window size for cropping the CIR
         win_idx: Number of sample points to input for regressor B
     Returns:
-        model: Trained Regressors A & B of  Regressive network
+        models: Trained Regressors A & B of  Regressive network
     """
     
     # Initialize optimizer
@@ -174,82 +172,86 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
 
                 # Reset gradient
                 optimizer.zero_grad()
-                
-                # CIR enhancement
-                cir_h_gen = gen(cir_l)
 
                 # Coarse ToA estimation
-                toa_coarse = regA(cir_h_gen)
+                toa_coarse = regA(cir_h)
 
                 # Cropping CIR for Regressor B
                 index = ((toa_coarse > win_siz//2) * (toa_coarse < 3200 - win_siz//2)).squeeze()
-                x = 12.5 * torch.arange(0, cir_l.shape[2]).repeat(2, 1).to(device)
+                x = 12.5 * torch.arange(0, cir_h.shape[2]).repeat(2, 1).to(device)
                 window = torch.arange(-win_siz, win_siz, 2*win_siz/win_idx).repeat(2, 1).to(device)
 
                 if torch.sum(index) != 0:
                     # For valid samples with coarse ToA estimation in range cont. to fine estimation
                     with torch.no_grad():
-                        cir_h_gen_val = cir_h_gen[index]
+                        cir_h_val = cir_h[index]
                         toa_coarse_val = toa_coarse[index]
-                        x_new = toa_coarse.unsqueeze(-1) + window.unsqueeze(0)
-                        x = x.repeat(cir_l.shape[0],1,1)
-                        cir_h_gen_crop = interp1d(cir_h_gen_val, x, x_new) 
+                        x_new = toa_coarse_val.unsqueeze(-1) + window.unsqueeze(0)
+                        x = x.repeat(cir_h_val.shape[0],1,1)
+                        cir_h_crop = interp1d(cir_h_val, x, x_new) 
 
 
                     # Estimating error of coarse ToA from ground truth
                     toa_val = toa[index]
+                    toa_coarse_val = toa_coarse_val.squeeze(-1)
                     diff_gt_coarse = toa_val - toa_coarse_val # Difference between ground-truth tau_0 and coarse[tau_0] 
-                    regB_pred = regB(cir_h_gen_crop)
+                    regB_pred = regB(cir_h_crop)
+                    regB_pred = regB_pred.squeeze(-1)
                     toa_fine = toa_coarse_val + regB_pred
 
-                    rand_index = random.randint(0, cir_h_gen_crop.size(0)-1) # [0, N-1]
-                    if test_plots and (i % 400) == 0 and (epoch % 5) == 0:
+                    rand_index = random.randint(0, cir_h_crop.size(0)-1) # [0, N-1]
+                    if test_plots and (i % 400) == 0:
                         # Test plots
                         cir_l_plot = real2complex2dim(cir_l[rand_index]).cpu().numpy().squeeze()
                         cir_h_plot = real2complex2dim(cir_h[rand_index]).cpu().numpy().squeeze()
-                        cir_h_gen_plot = real2complex2dim(cir_h_gen[rand_index]).detach().cpu().numpy().squeeze()
-                        cir_h_gen_crop_plot = real2complex2dim(cir_h_gen_crop[rand_index]).detach().cpu().numpy().squeeze()
+                        cir_h_crop_plot = real2complex2dim(cir_h_crop[rand_index]).detach().cpu().numpy().squeeze()
                         x_plot = 12.5 * torch.arange(0, 256)
                         x_new_plot = x_new[rand_index].cpu().numpy().squeeze()
                         x_new_plot = x_new_plot[0,:]
                         toa_plot = toa[rand_index].item()
-                        toa_coarse_plot = toa_coarse[rand_index].item()
-    
+                        toa_coarse_plot = toa_coarse_val[rand_index].item()
+                        toa_fine_plot = toa_fine[rand_index].item()
+
                         # abs values
                         cir_l_plot = np.abs(cir_l_plot)
                         cir_h_plot = np.abs(cir_h_plot)
-                        cir_h_gen_plot = np.abs(cir_h_gen_plot)
-                        cir_h_gen_crop_plot = np.abs(cir_h_gen_crop_plot)
-    
-                        plt.figure(figsize=(12,4))
+                        cir_h_crop_plot = np.abs(cir_h_crop_plot)
+
+                        plt.figure(figsize=(16,8))
                         # Input Plot
                         plt.subplot(1, 3, 1)
                         plt.plot(x_plot[:70], cir_l_plot[:70], label="Low-res. CIR")
                         plt.plot(x_plot[:70], cir_h_plot[:70], label="Ground Truth High-res. CIR")
-                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
-                        plt.title(f"Noisy low-res. CIR, ToA: {toa_plot}")
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='black',label=f'ToA {toa_plot}')
+                        plt.axvline(toa_coarse_plot, linewidth = 2, linestyle ="--", color ='red',label=f'Coarse ToA {toa_coarse_plot}')
+                        plt.axvline(toa_fine_plot, linewidth = 2, linestyle ="--", color ='green',label=f'Fine ToA {toa_fine_plot}')                        
+                        plt.title(f"Noisy low-res. CIR")
                         plt.legend()
                         
                         # Target Plot
                         plt.subplot(1, 3, 2)
-                        plt.plot(x_plot[:70], cir_h_gen_plot[:70], label="High-res. CIR", color='g')
                         plt.plot(x_plot[:70], cir_h_plot[:70], label="Ground Truth High-res. CIR")
-                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
-                        plt.title(f"Generated high-res. CIR, ToA: {toa_plot}")
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='black',label=f'ToA {toa_plot}')
+                        plt.axvline(toa_coarse_plot, linewidth = 2, linestyle ="--", color ='red',label=f'Coarse ToA {toa_coarse_plot}') 
+                        plt.axvline(toa_fine_plot, linewidth = 2, linestyle ="--", color ='green',label=f'Fine ToA {toa_fine_plot}')                                               
+                        plt.title(f"Ground Truth high-res. CIR")
                         plt.legend()
-                        
+
                         # Prediction Plot with Target Overlay
                         plt.subplot(1, 3, 3)
-                        plt.plot(x_new_plot, cir_h_gen_crop_plot, label="Cropped CIR (High)", color='g')
-                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='red',)
-                        plt.title(f"Cropped (windowed) high-res. CIR around coarse ToA {toa_coarse_plot}")
+                        plt.plot(x_new_plot, cir_h_crop_plot, label="Cropped CIR (High)", color='g')
+                        plt.axvline(toa_plot, linewidth = 2, linestyle ="--", color ='black',label=f'ToA {toa_plot}')
+                        plt.axvline(toa_coarse_plot, linewidth = 2, linestyle ="--", color ='red',label=f'Coarse ToA {toa_coarse_plot}')                        
+                        plt.axvline(toa_fine_plot, linewidth = 2, linestyle ="--", color ='green',label=f'Fine ToA {toa_fine_plot}')                        
+                        plt.title(f"Cropped (windowed) high-res. G.T CIR around coarse ToA")
                         plt.legend()
-                        
+
                         # Show the plots
                         plt.tight_layout()
-                        plt.show()
+                        plt.savefig(f'train-regAB/CIR_ToA_plots_{snr_case}.png')
                     
                     # Compute loss (fine + coarse)
+                    toa_coarse = toa_coarse.squeeze(-1)
                     coarse_loss = mseloss(toa_coarse, toa)
                     fine_loss = mseloss(regB_pred, diff_gt_coarse)
                     loss = coarse_loss + fine_loss
@@ -274,6 +276,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
                 else:
                     
                     # Compute loss (only coarse)
+                    toa_coarse = toa_coarse.squeeze(-1)
                     loss = mseloss(toa_coarse, toa)
 
                     # Backward pass and optimization
@@ -297,7 +300,7 @@ def train_regs_network(regA, regB, gen, train_loader, num_epochs, folder, snr_ca
 
     return loss_array, loss_arrayA, loss_arrayB
 
-def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
+def train(training_file, batch_size=400, num_epochs=200, win_idx=128, plot_losses=False):
     # choose device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -309,11 +312,12 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
 
     # initialize model
     regA_model = regnet(256).to(device)
+    regB_model = regnet(win_idx).to(device)
 
     # initialize folder for saving training data
-    folder_regA = os.path.join(proj_directory, 'train-regA')
-    if os.path.exists(folder_regA) == False:
-        os.makedirs(folder_regA)
+    folder_regAB = os.path.join(proj_directory, 'train-regAB')
+    if os.path.exists(folder_regAB) == False:
+        os.makedirs(folder_regAB)
     
     # Checking SNR case
     if 'high' in training_file:
@@ -324,17 +328,21 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False):
         snr_case = ''
     
     # train
-    regA_trained_model, loss_reg = train_regA_network(regA_model, dataloader, num_epochs, folder_regA, snr_case, test_plots=True)
+    loss_reg, loss_A, loss_B = train_regs_test_network(regA_model, regB_model, dataloader, num_epochs, folder_regAB, snr_case, test_plots=True)
 
     log_loss_reg = np.log(loss_reg)
-    plt.figure
-    plt.plot(log_loss_reg, label="MSE loss")
+    log_loss_A = np.log(loss_A)
+    log_loss_B = np.log(loss_B)
+    plt.figure(figsize=(8, 8))
+    plt.plot(log_loss_reg, label="Total loss (corase+fine)")
+    plt.plot(log_loss_A, label="Coarse loss")
+    plt.plot(log_loss_B, label="Fine loss")
     plt.xlabel("Iteration")
     plt.ylabel("Log(Loss)")
-    plt.title("Log Loss vs. Iteration (Regressive Network)")
+    plt.title("Log Loss vs. Iteration (Regressors Network)")
     plt.legend()
     plt.grid()
-    plt.savefig(f'train-regA/loss_vs_interation_{snr_case}_plot.png')
+    plt.savefig(f'train-regAB/loss_vs_interation_{snr_case}_plot.png')
     if plot_losses:
         
         plt.show()
@@ -344,5 +352,5 @@ if __name__ == '__main__':
     file_name_high = 'data/train_data_high.h5'
     file_name_low = 'data/train_data_low.h5'
 
-    train(file_name_high, plot_losses=True)
-    train(file_name_low, plot_losses=True)
+    train(file_name_high)
+    train(file_name_low)
