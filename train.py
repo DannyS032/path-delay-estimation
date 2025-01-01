@@ -162,7 +162,8 @@ def train_regs_test_network(regA, regB, gen, train_loader, num_epochs, folder, s
 
                         # Show the plots
                         plt.tight_layout()
-                        plt.savefig(f'train-reg/CIR_ToA_plots_{snr_case}.png')
+                        plt.savefig(f'train-reg-1m/CIR_ToA_plots_{snr_case}.png')
+                        plt.close()
                     
                     # Compute loss (fine + coarse)
                     toa_coarse = toa_coarse.squeeze(-1)
@@ -230,7 +231,7 @@ def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
     regB_model = regnet(win_idx).to(device)
 
     # initialize folder for saving training data
-    folder_reg = os.path.join(proj_directory, 'train-reg')
+    folder_reg = os.path.join(proj_directory, 'train-reg-1m')
     if os.path.exists(folder_reg) == False:
         os.makedirs(folder_reg)
     
@@ -243,7 +244,7 @@ def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
         snr_case = ''
     
     # load trained generative model
-    gen_model_path = os.path.join(proj_directory, f'train-gen/gen_model_trained_{snr_case}.w')
+    gen_model_path = os.path.join(proj_directory, f'train-gen-1m/gen_model_trained_{snr_case}.w')
     gen_model.load_state_dict(torch.load(gen_model_path, weights_only=True))
     gen_model.eval()
 
@@ -262,12 +263,13 @@ def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
     plt.title("Log Loss vs. Iteration (Regressors Network)")
     plt.legend()
     plt.grid()
-    plt.savefig(f'train-reg/loss_vs_interation_{snr_case}_plot.png')
+    plt.savefig(f'train-reg-1m/loss_vs_interation_{snr_case}_plot.png')
+    plt.close()
 
 if __name__ == '__main__':
     
-    file_name_high = 'data/train_data_high.h5'
-    file_name_low = 'data/train_data_low.h5'
+    file_name_high = 'data/train_data_high_1m.h5'
+    file_name_low = 'data/train_data_low_1m.h5'
 
     train(file_name_high)
     train(file_name_low)

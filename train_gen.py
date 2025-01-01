@@ -94,7 +94,7 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
     gen_model = unet().to(device)
 
     # initialize folder for saving training data
-    folder_gen = os.path.join(proj_directory, 'train-gen')
+    folder_gen = os.path.join(proj_directory, 'train-gen-1m')
     if os.path.exists(folder_gen) == False:
         os.makedirs(folder_gen)
     
@@ -120,7 +120,7 @@ def train(training_file, batch_size=400, num_epochs=200, plot_losses=False, alph
     plt.legend()
     plt.grid()
     if plot_losses:
-        plt.savefig(f'train-gen/loss_vs_interation_{snr_case}_plot.png')
+        plt.savefig(f'train-gen-1m/loss_vs_interation_{snr_case}_plot.png')
         plt.show()
 
     return log_loss
@@ -160,8 +160,8 @@ def train_for_test_alpha(file_name_high, file_name_low):
 
 if __name__ == '__main__':
     
-    file_name_high = 'data/train_data_high.h5'
-    file_name_low = 'data/train_data_low.h5'
+    file_name_high = 'data/train_data_high_1m.h5'
+    file_name_low = 'data/train_data_low_1m.h5'
 
     train(file_name_high)
     train(file_name_low)
