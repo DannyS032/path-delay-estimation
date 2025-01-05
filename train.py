@@ -14,6 +14,7 @@ from tqdm import tqdm
 from torchinterp1d import Interp1d
 import random
 from test_gen import *
+from train_gen import *
 
 def interp1d(y, x, x_new):
     '''
@@ -215,7 +216,7 @@ def train_regs_test_network(regA, regB, gen, train_loader, num_epochs, folder, s
 
     return loss_array, loss_arrayA, loss_arrayB
 
-def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
+def train(training_file, folder_reg, folder_gen, batch_size=400, num_epochs=200, win_idx=128, up_sample=2, plot_loss=False):
     # choose device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -226,12 +227,13 @@ def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
     # initialize models
+    signal_length = 128 * up_sample
     gen_model = unet().to(device)
-    regA_model = regnet(256).to(device)
+    regA_model = regnet(signal_length).to(device)
     regB_model = regnet(win_idx).to(device)
 
     # initialize folder for saving training data
-    folder_reg = os.path.join(proj_directory, 'train-reg-1m')
+    folder_reg = os.path.join(proj_directory, folder_reg)
     if os.path.exists(folder_reg) == False:
         os.makedirs(folder_reg)
     
@@ -243,33 +245,33 @@ def train(training_file, batch_size=400, num_epochs=200, win_idx=128):
     else:
         snr_case = ''
     
-    # load trained generative model
-    gen_model_path = os.path.join(proj_directory, f'train-gen-1m/gen_model_trained_{snr_case}.w')
-    gen_model.load_state_dict(torch.load(gen_model_path, weights_only=True))
-    gen_model.eval()
+    # train generative model
+    gen_model_trained, loss_reg = train_gen_network(gen_model, dataloader, num_epochs, folder_gen, snr_case)
+    gen_model_trained.eval()
 
-    # train
-    loss_reg, loss_A, loss_B = train_regs_test_network(regA_model, regB_model, gen_model, dataloader, num_epochs, folder_reg, snr_case, test_plots=True)
+    # train regressors
+    loss_reg, loss_A, loss_B = train_regs_test_network(regA_model, regB_model, gen_model_trained, dataloader, num_epochs, folder_reg, snr_case, test_plots=True)
 
-    log_loss_reg = np.log(loss_reg)
-    log_loss_A = np.log(loss_A)
-    log_loss_B = np.log(loss_B)
-    plt.figure(figsize=(8, 8))
-    plt.plot(log_loss_reg, label="Total loss (corase+fine)")
-    plt.plot(log_loss_A, label="Coarse loss")
-    plt.plot(log_loss_B, label="Fine loss")
-    plt.xlabel("Iteration")
-    plt.ylabel("Log(Loss)")
-    plt.title("Log Loss vs. Iteration (Regressors Network)")
-    plt.legend()
-    plt.grid()
-    plt.savefig(f'train-reg-1m/loss_vs_interation_{snr_case}_plot.png')
-    plt.close()
+    if plot_loss:
+        log_loss_reg = np.log(loss_reg)
+        log_loss_A = np.log(loss_A)
+        log_loss_B = np.log(loss_B)
+        plt.figure(figsize=(8, 8))
+        plt.plot(log_loss_reg, label="Total loss (corase+fine)")
+        plt.plot(log_loss_A, label="Coarse loss")
+        plt.plot(log_loss_B, label="Fine loss")
+        plt.xlabel("Iteration")
+        plt.ylabel("Log(Loss)")
+        plt.title("Log Loss vs. Iteration (Regressors Network)")
+        plt.legend()
+        plt.grid()
+        plt.savefig(f'train-reg-1m/loss_vs_interation_{snr_case}_plot.png')
+        plt.close()
 
 if __name__ == '__main__':
     
     file_name_high = 'data/train_data_high_1m.h5'
     file_name_low = 'data/train_data_low_1m.h5'
 
-    train(file_name_high)
-    train(file_name_low)
+    train(file_name_high, folder_reg='train-reg-1m', folder_gen='train-gen-1m')
+    train(file_name_low, folder_reg='train-reg-1m', folder_gen='train-gen-1m')
