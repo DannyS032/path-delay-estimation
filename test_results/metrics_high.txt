@@ -1,0 +1,7 @@
+RMSE: 3.0495
+Mean Error: 0.0080
+Median Error: -0.3309
+Std Dev: 3.0495
+Max Error: 27.6854
+Samples within ±1: 33.16%
+Samples within ±2: 59.48%
