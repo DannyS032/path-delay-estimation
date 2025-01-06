@@ -1,0 +1,8 @@
+RMSE: 9.6072
+Mean Error: 3.0742
+Median Error: 2.5085
+Std Dev: 9.1021
+Max Error: 60.6895
+Mean Processing Time: 2.57 ms
+Samples within ±1: 13.06%
+Samples within ±2: 24.60%
