@@ -1,6 +1,6 @@
-% Training Data Generation for Generative Network - Path Delay Estimation project
+% Data Generation for NN training & testing - Path Delay Estimation project
 % Written by Danny Sinder
-function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_case, up_sample, filename)
+function generate_data(num_samples, Fs, N, pilot_index, tau_rms, snr_case, up_sample, filename)
     % Generates desired number of training data samples for Generative Network training purposes 
     % Inputs:
     %   num_samples - Number of data samples to generate
@@ -17,6 +17,8 @@ function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_ca
     %       cir_high    - Simulated High-Res. CIR signal
     %       cfr_high    - Simulated noiseless high-res. CFR signal
     %       tau_0       - True ToA
+    %       L           - Number of taps
+    %       SNR         - Signal-to-noise ratio used
 
     % Check if the file already exists and delete it
     if isfile(filename)
@@ -28,6 +30,8 @@ function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_ca
     cir_high = zeros(num_samples, 2, N*up_sample); 
     cfr_high = zeros(num_samples, 2, N*up_sample); 
     toa = zeros(num_samples, 1); 
+    num_taps = zeros(num_samples, 1);
+    SNR_db = zeros(num_samples, 1);
 
     % Initialize the waitbar
     hWaitbar = waitbar(0, 'Generating Training Data...');
@@ -35,7 +39,7 @@ function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_ca
     % Data generation and saving
     for i = 1:num_samples
         % Generate the CFRs
-        [cfr_l, cfr_h, ~, ~, tau_0 , ~, ~, ~, ~, ~, ~, ~, ~] = ...
+        [cfr_l, cfr_h, L, ~, tau_0 , ~, ~, ~, ~, ~, ~, ~, snr] = ...
             generate_cfr(Fs, N, pilot_index, tau_rms, snr_case, up_sample);
 
         % Generate the CIRs
@@ -56,6 +60,10 @@ function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_ca
         cfr_high(i, 2, :) = imag(cfr_h);
 
         toa(i) = tau_0;
+
+        num_taps(i) = L;
+
+        SNR_db(i) = snr;
 
         % Update the waitbar
         progress = i / num_samples;
@@ -78,5 +86,11 @@ function generate_training_data(num_samples, Fs, N, pilot_index, tau_rms, snr_ca
 
     h5create(filename, '/ToA', size(toa));
     h5write(filename, '/ToA', toa);
+
+    h5create(filename, '/L', size(num_taps));
+    h5write(filename, '/L', num_taps);
+
+    h5create(filename, '/SNR', size(SNR_db));
+    h5write(filename, '/SNR', SNR_db);
 
 end
