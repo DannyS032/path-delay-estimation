@@ -1,0 +1,31 @@
+Sample Distribution Analysis
+===========================
+
+Total samples: 50000
+
+L value distribution:
+L=3.0: 3792 samples (7.6%)
+L=4.0: 3858 samples (7.7%)
+L=5.0: 3838 samples (7.7%)
+L=6.0: 3842 samples (7.7%)
+L=7.0: 3882 samples (7.8%)
+L=8.0: 3827 samples (7.7%)
+L=9.0: 3804 samples (7.6%)
+L=10.0: 3869 samples (7.7%)
+L=11.0: 3849 samples (7.7%)
+L=12.0: 3844 samples (7.7%)
+L=13.0: 3881 samples (7.8%)
+L=14.0: 3894 samples (7.8%)
+L=15.0: 3820 samples (7.6%)
+
+SNR distribution:
+SNR 0.0-1.0dB: 5032 samples (10.1%)
+SNR 1.0-2.0dB: 5065 samples (10.1%)
+SNR 2.0-3.0dB: 5010 samples (10.0%)
+SNR 3.0-4.0dB: 5015 samples (10.0%)
+SNR 4.0-5.0dB: 4927 samples (9.9%)
+SNR 5.0-6.0dB: 4960 samples (9.9%)
+SNR 6.0-7.0dB: 4950 samples (9.9%)
+SNR 7.0-8.0dB: 5005 samples (10.0%)
+SNR 8.0-9.0dB: 5027 samples (10.1%)
+SNR 9.0-10.0dB: 5009 samples (10.0%)
