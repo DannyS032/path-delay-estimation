@@ -59,7 +59,7 @@ def estimate_toa_for_sample(models, sample, device):
 
 def create_test_directories():
     """Create organized directory structure for L-SNR test results"""
-    base_dir = 'test_results_l_snr'
+    base_dir = 'test_results_l_snr_final'
     subdirs = ['tables', 'plots', 'statistics']
     for dir in [base_dir] + [f"{base_dir}/{subdir}" for subdir in subdirs]:
         os.makedirs(dir, exist_ok=True)
@@ -81,19 +81,17 @@ def analyze_data_distribution(dataset):
     # Get unique L values (should be integers 3-15)
     unique_L = np.unique(L_values)
     
-    # Create SNR bins (let's use 1dB steps)
-    snr_min = np.floor(min(SNR_values))
-    snr_max = np.ceil(max(SNR_values))
-    snr_bins = np.arange(snr_min, snr_max + 1, 1.0)
+    # # Get unique SNR values (30:-3:-5 from MATLAB code)
+    unique_SNR = np.unique(SNR_values)
     
-    return unique_L, snr_bins, L_values, SNR_values
+    return unique_L, unique_SNR, L_values, SNR_values
 
 def test_l_snr(test_file):
     """
     L-SNR testing adapted for existing data distribution
     Args:
         test_file: Path to test data file
-    """
+    """    
     base_dir = create_test_directories()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
@@ -102,34 +100,34 @@ def test_l_snr(test_file):
     regA_model = regnet(256).to(device)
     regB_model = regnet(128).to(device)
     
-    # Load weights based on SNR case
-    snr_case = 'high' if 'high' in test_file else 'low'
-    gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{snr_case}.w', weights_only=True))
-    regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{snr_case}.w', weights_only=True))
-    regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{snr_case}.w', weights_only=True))
-    
-    models = (gen_model.eval(), regA_model.eval(), regB_model.eval())
-    
     # Load dataset and analyze distribution
     dataset = ChannelDataset(test_file)
-    unique_L, snr_bins, L_values, SNR_values = analyze_data_distribution(dataset)
+    unique_L, unique_SNR, L_values, SNR_values = analyze_data_distribution(dataset)
     
     # Create storage for results
     results = {}
-    for l in unique_L:
-        results[l] = {snr: {'errors': [], 'count': 0} 
-                     for snr in snr_bins[:-1]}
+    results = {l: {snr: {'errors': [], 'count': 0} 
+           for snr in unique_SNR} for l in unique_L}
     
     # Testing loop
     with torch.no_grad():
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+        current_snr_case = None
         for sample in tqdm(dataloader, desc="Processing samples"):
             # Get L and SNR values
             l = sample['l'].item()
             snr = sample['snr'].item()
+
+            # Determine SNR case
+            snr_case = 'low' if snr <= 10 else 'high'
             
-            # Find SNR bin
-            snr_bin = snr_bins[np.digitize(snr, snr_bins) - 1]
+            # Only reload models if SNR case changed
+            if snr_case != current_snr_case:
+                gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{snr_case}.w', weights_only=True))
+                regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{snr_case}.w', weights_only=True))
+                regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{snr_case}.w', weights_only=True))
+                current_snr_case = snr_case
+                models = (gen_model.eval(), regA_model.eval(), regB_model.eval())
             
             # Process sample through models and get error
             # (Replace with your actual estimation code)
@@ -137,30 +135,34 @@ def test_l_snr(test_file):
             error = estimated_toa - sample['toa'].item()
             
             # Store result
-            results[l][snr_bin]['errors'].append(error)
-            results[l][snr_bin]['count'] += 1
+            results[l][snr]['errors'].append(error)
+            results[l][snr]['count'] += 1
     
     # Create results DataFrame
-    results_df = pd.DataFrame(index=snr_bins[:-1], columns=unique_L)
-    sample_counts_df = pd.DataFrame(index=snr_bins[:-1], columns=unique_L)
+    results_df = pd.DataFrame(index=unique_SNR, columns=unique_L)
+    sample_counts_df = pd.DataFrame(index=unique_SNR, columns=unique_L)
     
     # Calculate 90th percentile errors and store sample counts
     for l in unique_L:
-        for snr in snr_bins[:-1]:
+        for snr in unique_SNR:
             errors = results[l][snr]['errors']
             count = results[l][snr]['count']
             
-            if count >= 100:  # Minimum sample threshold
+            if count > 0:  # Make sure we have samples
                 percentile_90 = np.percentile(np.abs(errors), 90)
                 results_df.loc[snr, l] = percentile_90
             else:
                 results_df.loc[snr, l] = np.nan
             
             sample_counts_df.loc[snr, l] = count
+            
+    # Sort by SNR values descending (30 dB to -5 dB)
+    results_df = results_df.sort_index(ascending=False)
+    sample_counts_df = sample_counts_df.sort_index(ascending=False)
     
     # Save results
-    results_df.to_csv(f'{base_dir}/tables/percentile_90_results_{snr_case}.csv')
-    sample_counts_df.to_csv(f'{base_dir}/tables/sample_counts_{snr_case}.csv')
+    results_df.to_csv(f'{base_dir}/tables/percentile_90_results.csv')
+    sample_counts_df.to_csv(f'{base_dir}/tables/sample_counts.csv')
 
     plot_data = results_df.values.astype(float)
     
@@ -170,26 +172,27 @@ def test_l_snr(test_file):
     plt.colorbar(label='90th Percentile Error')
     plt.xlabel('Number of Taps (L)')
     plt.ylabel('SNR (dB)')
-    plt.title(f'90th Percentile ToA Estimation Error ({snr_case.upper()} SNR)')
+    plt.title(f'90th Percentile ToA Estimation Error')
     plt.xticks(range(len(unique_L)), unique_L)
-    plt.yticks(range(len(snr_bins[:-1])), [f'{snr:.1f}' for snr in snr_bins[:-1]])
-    plt.savefig(f'{base_dir}/plots/error_heatmap_{snr_case}.png')
+    plt.yticks(range(len(unique_SNR)), [f'{snr:.1f}' for snr in unique_SNR[::-1]])
+    plt.savefig(f'{base_dir}/plots/error_heatmap.png')
     plt.close()
     
     # Save distribution analysis
-    with open(f'{base_dir}/statistics/data_distribution_{snr_case}.txt', 'w') as f:
+    with open(f'{base_dir}/statistics/data_distribution.txt', 'w') as f:
         f.write("Sample Distribution Analysis\n")
         f.write("===========================\n\n")
         f.write(f"Total samples: {len(L_values)}\n\n")
+        
         f.write("L value distribution:\n")
         for l in unique_L:
             count = np.sum(L_values == l)
             f.write(f"L={l}: {count} samples ({count/len(L_values)*100:.1f}%)\n")
+        
         f.write("\nSNR distribution:\n")
-        for i in range(len(snr_bins)-1):
-            mask = (SNR_values >= snr_bins[i]) & (SNR_values < snr_bins[i+1])
-            count = np.sum(mask)
-            f.write(f"SNR {snr_bins[i]:.1f}-{snr_bins[i+1]:.1f}dB: {count} samples ({count/len(SNR_values)*100:.1f}%)\n")
+        for snr in unique_SNR:
+            count = np.sum(SNR_values == snr)  # Changed to exact match
+            f.write(f"SNR={snr:.1f}dB: {count} samples ({count/len(SNR_values)*100:.1f}%)\n")
 
 def save_results_table(results_df, base_dir):
     """
@@ -223,74 +226,5 @@ def save_results_table(results_df, base_dir):
 
 if __name__ == '__main__':
     # Create a dataset that combines both high and low SNR data
-    dataset_high = ChannelDataset('data/test_data_high.h5')
-    dataset_low = ChannelDataset('data/test_data_low.h5')
-    
-    # First, analyze distribution of both datasets
-    unique_L_high, snr_bins_high, L_values_high, SNR_values_high = analyze_data_distribution(dataset_high)
-    unique_L_low, snr_bins_low, L_values_low, SNR_values_low = analyze_data_distribution(dataset_low)
-    
-    # Combine the SNR ranges
-    snr_min = min(np.min(SNR_values_low), np.min(SNR_values_high))
-    snr_max = max(np.max(SNR_values_low), np.max(SNR_values_high))
-    
-    print(f"Full SNR range: {snr_min:.1f} to {snr_max:.1f} dB")
-    
-    # Process both datasets
-    for test_file in ['data/test_data_high.h5', 'data/test_data_low.h5']:
-        print(f"\nProcessing {test_file}...")
-        
-        # For high SNR file, use high SNR model
-        if 'high' in test_file:
-            model_suffix = 'high'
-        else:
-            model_suffix = 'low'
-            
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
-        # Load models with appropriate weights
-        gen_model = unet().to(device)
-        regA_model = regnet(256).to(device)
-        regB_model = regnet(128).to(device)
-        
-        gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{model_suffix}.w', weights_only=True))
-        regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{model_suffix}.w', weights_only=True))
-        regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{model_suffix}.w', weights_only=True))
-        
-        models = (gen_model.eval(), regA_model.eval(), regB_model.eval())
-        
-        # Test file
-        test_l_snr(test_file)
-
-    # Now combine the results from both CSV files
-    base_dir = 'test_results_l_snr'
-    high_results = pd.read_csv(f'{base_dir}/tables/percentile_90_results_high.csv', index_col=0)
-    low_results = pd.read_csv(f'{base_dir}/tables/percentile_90_results_low.csv', index_col=0)
-    
-    # Combine and sort by SNR
-    combined_results = pd.concat([high_results, low_results])
-    combined_results = combined_results.sort_index()
-    
-    # Remove duplicate SNR values if any (take the better result)
-    combined_results = combined_results.groupby(level=0).min()
-    
-    # Save combined results
-    combined_results.to_csv(f'{base_dir}/tables/percentile_90_results_combined.csv')
-    
-    # Generate combined heatmap
-    plt.figure(figsize=(12, 8))
-    plt.imshow(combined_results.values, aspect='auto', cmap='viridis')
-    plt.colorbar(label='90th Percentile Error')
-    plt.xlabel('Number of Taps (L)')
-    plt.ylabel('SNR (dB)')
-    plt.title('90th Percentile ToA Estimation Error (Combined SNR)')
-    plt.xticks(range(len(combined_results.columns)), combined_results.columns)
-    plt.yticks(range(len(combined_results.index)), [f'{snr:.1f}' for snr in combined_results.index])
-    plt.savefig(f'{base_dir}/plots/error_heatmap_combined.png')
-    plt.close()
-    
-    print("\nCombined results saved in test_results_l_snr/")
-
-    # Save the final results table
-    save_results_table(combined_results, base_dir)
-    print("\nResults table saved in test_results_l_snr/tables/L_SNR_results_table.txt")
+    test_file = 'data/test_data_L_SNR.h5'
+    test_l_snr(test_file)
