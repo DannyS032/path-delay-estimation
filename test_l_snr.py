@@ -227,7 +227,7 @@ def test_l_snr(test_files):
     results_df, sample_counts_df = calculate_statistics(combined_results, unique_L, unique_SNR)
     
     # Save all results
-    results_df.to_csv(f'{base_dir}/tables/percentile_90_results.csv')
+    results_df.to_csv(f'{base_dir}/tables/NN_final_results.csv')
     sample_counts_df.to_csv(f'{base_dir}/tables/sample_counts.csv')
     
     save_visualizations(results_df, unique_L, unique_SNR, base_dir)
