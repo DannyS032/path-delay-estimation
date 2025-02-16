@@ -155,6 +155,7 @@ def calculate_statistics(combined_results, unique_L, unique_SNR):
     """Calculate final statistics from combined results"""
     results_df = pd.DataFrame(index=unique_SNR, columns=unique_L)
     sample_counts_df = pd.DataFrame(index=unique_SNR, columns=unique_L)
+    fd_rates_df = pd.DataFrame(index=unique_SNR, columns=['FD_Rate'])
     
     for l in unique_L:
         for snr in unique_SNR:
@@ -168,12 +169,29 @@ def calculate_statistics(combined_results, unique_L, unique_SNR):
                 results_df.loc[snr, l] = np.nan
             
             sample_counts_df.loc[snr, l] = count
+
+    # Calculate False Detection Rate per SNR
+    threshold = 12.5  # 12.5 nsec threshold as specified
+    for snr in unique_SNR:
+        total_errors = []
+        # Collect all errors for this SNR across all L values
+        for l in unique_L:
+            total_errors.extend(combined_results[l][snr]['errors'])
+        
+        if total_errors:
+            # Calculate FD rate: number of errors > threshold divided by total samples
+            fd_count = sum(abs(error) > threshold for error in total_errors)
+            fd_rate = fd_count / len(total_errors)
+            fd_rates_df.loc[snr, 'FD_Rate'] = fd_rate
+        else:
+            fd_rates_df.loc[snr, 'FD_Rate'] = np.nan
     
     # Sort by SNR values descending
     results_df = results_df.sort_index(ascending=False)
     sample_counts_df = sample_counts_df.sort_index(ascending=False)
+    fd_rates_df = fd_rates_df.sort_index(ascending=False)
     
-    return results_df, sample_counts_df
+    return results_df, sample_counts_df, fd_rates_df
 
 def analyze_data_distribution(dataset):
     """Analyze the distribution of L and SNR in the dataset"""
@@ -224,15 +242,17 @@ def test_l_snr(test_files):
     
     # Calculate final statistics
     print("Calculating final statistics...")
-    results_df, sample_counts_df = calculate_statistics(combined_results, unique_L, unique_SNR)
+    results_df, sample_counts_df, fd_rates_df = calculate_statistics(combined_results, unique_L, unique_SNR)
     
     # Save all results
     results_df.to_csv(f'{base_dir}/tables/NN_final_results.csv')
     sample_counts_df.to_csv(f'{base_dir}/tables/sample_counts.csv')
+    fd_rates_df.to_csv(f'{base_dir}/tables/false_detection_rates.csv')
     
     save_visualizations(results_df, unique_L, unique_SNR, base_dir)
+    save_fd_visualizations(fd_rates_df, base_dir)
     save_distribution_analysis(all_L_values, all_SNR_values, unique_L, unique_SNR, base_dir)
-    save_results_table(results_df, base_dir)
+    save_results_table(results_df, fd_rates_df, base_dir)
     
     print(f"\nResults saved in {base_dir}")
 
@@ -249,6 +269,30 @@ def save_visualizations(results_df, unique_L, unique_SNR, base_dir):
     plt.xticks(range(len(unique_L)), unique_L)
     plt.yticks(range(len(unique_SNR)), [f'{snr:.1f}' for snr in unique_SNR[::-1]])
     plt.savefig(f'{base_dir}/plots/error_heatmap.png')
+    plt.close()
+
+def save_fd_visualizations(fd_rates_df, base_dir):
+    """Generate and save FD rate visualization plot"""
+    plt.figure(figsize=(10, 6))
+    snr_values = fd_rates_df.index
+    fd_rates = fd_rates_df['FD_Rate']
+    
+    plt.plot(snr_values, fd_rates, 'b-o')
+    plt.grid(True)
+    plt.xlabel('SNR (dB)')
+    plt.ylabel('False Detection Rate')
+    plt.title('False Detection Rate vs SNR')
+    plt.xticks(snr_values)
+    
+    # Add percentage labels on each point
+    for x, y in zip(snr_values, fd_rates):
+        plt.annotate(f'{y:.2%}', 
+                    (x, y),
+                    textcoords="offset points",
+                    xytext=(0,10),
+                    ha='center')
+    
+    plt.savefig(f'{base_dir}/plots/false_detection_rates.png')
     plt.close()
 
 def save_distribution_analysis(L_values, SNR_values, unique_L, unique_SNR, base_dir):
@@ -268,16 +312,19 @@ def save_distribution_analysis(L_values, SNR_values, unique_L, unique_SNR, base_
             count = np.sum(SNR_values == snr)
             f.write(f"SNR={snr:.1f}dB: {count} samples ({count/len(SNR_values)*100:.1f}%)\n")
 
-def save_results_table(results_df, base_dir):
+def save_results_table(results_df, fd_rates_df, base_dir):
     """Save results in tabulated format"""
     table = []
-    headers = ['SNR(dB)'] + [f'L={l}' for l in results_df.columns]
+    headers = ['SNR(dB)'] + [f'L={l}' for l in results_df.columns] + ['FD_Rate']
     
     for snr_idx in results_df.index:
         row = [f'{snr_idx:.1f}']
         for l in results_df.columns:
             value = results_df.loc[snr_idx, l]
             row.append(f'{value:.3f}' if not np.isnan(value) else 'N/A')
+        # Add FD rate
+        fd_rate = fd_rates_df.loc[snr_idx, 'FD_Rate']
+        row.append(f'{fd_rate:.3%}' if not np.isnan(fd_rate) else 'N/A')
         table.append(row)
     
     # Save as text file with fixed-width format
