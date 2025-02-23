@@ -163,7 +163,7 @@ def train_regs_test_network(regA, regB, gen, train_loader, num_epochs, folder, s
 
                         # Show the plots
                         plt.tight_layout()
-                        plt.savefig(f'train-reg-1m/CIR_ToA_plots_{snr_case}.png')
+                        plt.savefig(f'train-reg/CIR_ToA_plots_{snr_case}.png')
                         plt.close()
                     
                     # Compute loss (fine + coarse)
@@ -265,13 +265,13 @@ def train(training_file, folder_reg, folder_gen, batch_size=400, num_epochs=200,
         plt.title("Log Loss vs. Iteration (Regressors Network)")
         plt.legend()
         plt.grid()
-        plt.savefig(f'train-reg-1m/loss_vs_interation_{snr_case}_plot.png')
+        plt.savefig(f'train-reg/loss_vs_interation_{snr_case}_plot.png')
         plt.close()
 
 if __name__ == '__main__':
     
-    file_name_high = 'data/train_data_high_1m.h5'
-    file_name_low = 'data/train_data_low_1m.h5'
+    file_name_high = 'data/train_data_high.h5'
+    file_name_low = 'data/train_data_low.h5'
 
-    train(file_name_high, folder_reg='train-reg-1m', folder_gen='train-gen-1m')
-    train(file_name_low, folder_reg='train-reg-1m', folder_gen='train-gen-1m')
+    train(file_name_high, folder_reg='train-reg', folder_gen='train-gen')
+    train(file_name_low, folder_reg='train-reg', folder_gen='train-gen')

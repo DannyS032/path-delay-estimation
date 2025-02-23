@@ -170,9 +170,9 @@ def test_model(test_file, snr_case, num_plots=20):
     regB_model = regnet(win_idx).to(device)
 
     # Load trained weights
-    gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{snr_case}.w'))
-    regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{snr_case}.w'))
-    regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{snr_case}.w'))
+    gen_model.load_state_dict(torch.load(f'train-gen/gen_model_trained_{snr_case}.w'))
+    regA_model.load_state_dict(torch.load(f'train-reg/regA_model_trained_{snr_case}.w'))
+    regB_model.load_state_dict(torch.load(f'train-reg/regB_model_trained_{snr_case}.w'))
 
     # Set models to evaluation mode
     gen_model.eval()
@@ -282,9 +282,9 @@ def test_model_cycshift_window(test_file, snr_case, num_plots=20):
     regB_model = regnet(win_idx).to(device)
 
     # Load trained weights
-    gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{snr_case}.w'))
-    regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{snr_case}.w'))
-    regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{snr_case}.w'))
+    gen_model.load_state_dict(torch.load(f'train-gen/gen_model_trained_{snr_case}.w'))
+    regA_model.load_state_dict(torch.load(f'train-reg/regA_model_trained_{snr_case}.w'))
+    regB_model.load_state_dict(torch.load(f'train-reg/regB_model_trained_{snr_case}.w'))
 
     # Set models to evaluation mode
     gen_model.eval()

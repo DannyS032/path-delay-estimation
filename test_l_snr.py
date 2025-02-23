@@ -59,7 +59,7 @@ def estimate_toa_for_sample(models, sample, device):
 
 def create_test_directories():
     """Create organized directory structure for L-SNR test results"""
-    base_dir = 'test_results_l_snr_final'
+    base_dir = 'test_results_l_snr'
     subdirs = ['tables', 'plots', 'statistics', 'individual_results'  ]
     for dir in [base_dir] + [f"{base_dir}/{subdir}" for subdir in subdirs]:
         os.makedirs(dir, exist_ok=True)
@@ -101,9 +101,9 @@ def process_single_file(file_path, models, device, base_dir):
             # Update models if SNR case changes
             snr_case = 'low' if snr <= 10 else 'high'
             if snr_case != current_snr_case:
-                gen_model.load_state_dict(torch.load(f'train-gen-1m/gen_model_trained_{snr_case}.w', weights_only=True))
-                regA_model.load_state_dict(torch.load(f'train-reg-1m/regA_model_trained_{snr_case}.w', weights_only=True))
-                regB_model.load_state_dict(torch.load(f'train-reg-1m/regB_model_trained_{snr_case}.w', weights_only=True))
+                gen_model.load_state_dict(torch.load(f'train-gen/gen_model_trained_{snr_case}.w', weights_only=True))
+                regA_model.load_state_dict(torch.load(f'train-reg/regA_model_trained_{snr_case}.w', weights_only=True))
+                regB_model.load_state_dict(torch.load(f'train-reg/regB_model_trained_{snr_case}.w', weights_only=True))
                 current_snr_case = snr_case
                 models = (gen_model.eval(), regA_model.eval(), regB_model.eval())
             
