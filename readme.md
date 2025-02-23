@@ -25,13 +25,18 @@ This project implements a deep learning approach to estimate Time of Arrival (TO
 
 ```
 path-delay-estimation/
-├── data/               # Training and test datasets
-├── model/             # Neural network model implementations
-│   ├── layers.py      # Custom layer definitions
-│   ├── loss.py        # Loss function implementations
-│   └── network.py     # Network architecture definitions
-├── test/              # Test and evaluation scripts
-└── train/             # Training scripts
+├── assets/              # Diagrams and plots for readme
+├── data/                # Training and test datasets
+├── final_analysis/      # Tables and error statstic analysis for all tests
+├── model/               # Neural network model implementations
+├── test_results/        # Test results for interpolation vs. cyclic shift
+├── test_results_l_snr/  # Test results for L+SNR pair test
+├── train_gen/           # Trained models and training logs for generative network
+├── train_reg/           # Trained models and training logs for regressive networks
+├── verification/        # Wireless model statistical verification scripts and results
+├── test_results_l_snr/  # Test results for L+SNR pair test
+├── test_results_l_snr/  # Test results for L+SNR pair test
+└── train/               # Training scripts
 ```
 
 ## Technical Requirements
