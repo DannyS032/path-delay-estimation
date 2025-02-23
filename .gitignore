@@ -9,8 +9,5 @@ train_data_high.h5
 train_data_low.h5
 test_data_high.h5
 test_data_low.h5
-train_data_high_1m.h5
-train_data_low_1m.h5
-test_data_L_SNR.h5
 test_data_L_SNR_1.h5
 test_data_L_SNR_2.h5
