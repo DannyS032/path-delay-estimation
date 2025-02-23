@@ -4,7 +4,7 @@ Final project in EE at Tel-Aviv Univeristy supervised by Toga Networks. Implemen
 
 ## Project Overview
 
-![Project Architecture Overview](assets/project_diagram.png)
+![Project Architecture Overview](assets/block_diagram.png)
 
 This project implements a deep learning approach to estimate Time of Arrival (TOA) of radio frequency (RF) signals from channel frequency response (CFR) measurements. The system uses a two-stage neural network architecture:
 
