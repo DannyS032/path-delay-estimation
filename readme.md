@@ -8,14 +8,14 @@ Final project in EE at Tel-Aviv Univeristy supervised by Toga Networks. Implemen
 
 This project implements a deep learning approach to estimate Time of Arrival (TOA) of radio frequency (RF) signals from channel frequency response (CFR) measurements. The system uses a two-stage neural network architecture:
 
-1. **CIR Enhancement Stage**: A generator network extends the effective bandwidth and produces high-resolution Channel Impulse Response (CIR) while performing denoising.
+1. **CIR Enhancement Stage**: A generative network extends the effective bandwidth and produces high-resolution Channel Impulse Response (CIR) while performing denoising.
 
 2. **TOA Estimation Stage**: A cascade of two regressor networks estimates TOA - first coarsely, then refined by focusing on the region of interest around the initial estimate.
 
 ## Key Features
 
 - Implementation of model-based deep learning for TOA estimation
-- Wireless channel model simulation for training data generation
+- Wireless channel model simulation for training and testing data generation
 - High-resolution CIR generation through bandwidth extension
 - Coarse-to-fine TOA estimation architecture
 - Support for both high and low SNR scenarios
@@ -34,6 +34,20 @@ path-delay-estimation/
 └── train/             # Training scripts
 ```
 
+## Technical Requirements
+
+### MATLAB (for Data Generation)
+- MATLAB R2020b or newer
+- Signal Processing Toolbox
+- Communications Toolbox
+
+### Python (for Neural Network Implementation)
+- Python 3.8+
+- PyTorch 1.7+
+- CUDA-capable GPU (recommended for training)
+- torchinterp1d
+- Additional dependencies listed in requirements.txt
+
 ## Installation
 
 1. Clone the repository:
@@ -47,12 +61,23 @@ cd path-delay-estimation
 pip install torch numpy h5py matplotlib tqdm papaparse sheetjs mathjs lodash
 ```
 
+3. Install 1D interpolation package:
+```bash
+pip install torchinterp1d
+```
+
+4. Alternative installation using 'requirements.txt':
+```bash
+pip install -r requirements.txt
+```
+
 ## Usage
 
-1. Generate training data:
-```bash
-python training_data_generation.py
-```
+1. Generate training and testing data using MATLAB:
+```matlab
+% In MATLAB
+training_data_generation
+test_data_generation
 
 2. Train the models:
 ```bash
@@ -64,27 +89,9 @@ python train.py
 python test.py
 ```
 
-## Performance
+## Results
 
-The implemented system achieves:
-- 9-58% improved root mean squared error (RMSE) for distance ranging
-- Up to 22% improved false detection rate compared to conventional super-resolution algorithms
-- Enhanced performance in low SNR conditions
-- Improved resolution capability for closely spaced multipath components
-
-## Technical Requirements
-
-- Python 3.8+
-- PyTorch 1.7+ 
-- CUDA-capable GPU (recommended for training)
-- 16GB RAM minimum
-
-## Contributing
-
-This is a research implementation. Contributions are welcome through pull requests. Please ensure:
-- Code follows the existing style
-- New features include appropriate tests
-- Documentation is updated accordingly
+![Project Architecture Overview](assets/CIR_ToA_plots.png)
 
 ## Citation
 
@@ -98,10 +105,6 @@ If you use this code in your research, please cite:
 }
 ```
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Contact
 
 Danny Sinder - danny.sinder@email.com
@@ -110,6 +113,6 @@ Project Link: https://github.com/DannyS032/path-delay-estimation
 
 ## Acknowledgments
 
-- Original paper authors for the theoretical foundation
+- Original paper authors for the theoretical foundation and NN design
 - Toga Networks for project support
 - The open-source community for various tools and libraries used in this implementation
