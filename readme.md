@@ -110,7 +110,7 @@ If you use this code in your research, please cite:
 
 ## Contact
 
-Danny Sinder - danny.sinder@email.com
+Danny Sinder - sinderdanny@gmail.com
 
 Project Link: https://github.com/DannyS032/path-delay-estimation
 
