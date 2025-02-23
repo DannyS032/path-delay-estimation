@@ -33,10 +33,7 @@ path-delay-estimation/
 ├── test_results_l_snr/  # Test results for L+SNR pair test
 ├── train_gen/           # Trained models and training logs for generative network
 ├── train_reg/           # Trained models and training logs for regressive networks
-├── verification/        # Wireless model statistical verification scripts and results
-├── test_results_l_snr/  # Test results for L+SNR pair test
-├── test_results_l_snr/  # Test results for L+SNR pair test
-└── train/               # Training scripts
+└── verification/        # Wireless model statistical verification scripts and results
 ```
 
 ## Technical Requirements
