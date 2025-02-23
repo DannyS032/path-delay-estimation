@@ -11,3 +11,5 @@ test_data_high.h5
 test_data_low.h5
 test_data_L_SNR_1.h5
 test_data_L_SNR_2.h5
+verification/cfr_simulations_high.h5
+verification/cfr_simulations_low.h5

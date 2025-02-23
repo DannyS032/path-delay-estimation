@@ -37,7 +37,7 @@ for i = 1:length(delay_range)
 end
 
 % Step 6: Find peaks in the MUSIC spectrum and apply 17 dB threshold
-[peak_values, peak_locs] = findpeaks(abs(P_music));
+[peak_values, peak_locs] = findpeaks(P_music);
 max_peak = max(P_music);
 threshold = max_peak - 17;  % 17 dB below maximum peak
 
