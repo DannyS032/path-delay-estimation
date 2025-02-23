@@ -80,6 +80,7 @@ pip install -r requirements.txt
 % In MATLAB
 training_data_generation
 test_data_generation
+```
 
 2. Train the models:
 ```bash
