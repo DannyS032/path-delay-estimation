@@ -1,6 +1,6 @@
 # Path Delay Estimation
 
-A research implementation of super-resolution Time of Arrival (TOA) estimation using neural networks for indoor geolocation applications, based on the 2020 paper "Super-Resolution Time-of-Arrival Estimation using Neural Networks" by Hsiao et al.
+Final project in EE at Tel-Aviv Univeristy supervised by Toga Networks. Implementation of super-resolution Time of Arrival (TOA) estimation using neural networks for indoor geolocation applications, based on the 2020 paper "Super-Resolution Time-of-Arrival Estimation using Neural Networks" by Hsiao et al.
 
 ## Project Overview
 
